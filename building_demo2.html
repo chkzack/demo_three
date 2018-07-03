@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>示例2</title>
+<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" src="js/three.js"></script>
+<script type="text/javascript" src="js/OBJLoader.js"></script>
+<script type="text/javascript" src="js/MTLLoader.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<link rel="stylesheet" href="css/common.css"/>
+</head>
+<body>
+<script type="text/javascript">
+    var scene, camera ,renderer, mesh, controls, container;
+    var id = null;
+    var clock = new THREE.Clock();
+    // 初始化旋转坐标
+    var axis = new THREE.Object3D();
+    axis.position.x = 0;
+    axis.position.y = 0;
+    axis.position.z = 0;
+
+    function init() {
+        // 初始化画布宽高
+        var SCREEN_WIDTH = window.innerWidth-20, SCREEN_HEIGHT = window.innerHeight-20;
+
+        // 渲染器
+        if ( Detector.webgl )
+            renderer = new THREE.WebGLRenderer( {antialias:true} );
+        else
+            renderer = new THREE.CanvasRenderer();
+        renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        //renderer.setClearColor(0x000000);  //画布颜色
+
+        // 将渲染层添加到DOM
+        container = document.body; //document.getElementById( 'ThreeJS' );
+        container.appendChild( renderer.domElement );
+
+        // 创建场景
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x555555);
+        scene.add(axis);    // 向场景添加旋转坐标系
+
+        // 相机
+        camera = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight , 0.1, 100000);//透视
+        camera.position.set(1200, 1800, 4500);//相机位置
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+        scene.add(camera);//把相机添加到场景中
+
+         var mtlLoader = new THREE.MTLLoader();
+         mtlLoader.setPath('./obj/');   // 加载obj路径
+         mtlLoader.load('house3.mtl', function(materials) {     //  预先加载mtl文件
+                materials.preload();
+
+                var objLoader = new THREE.OBJLoader();
+                objLoader.setMaterials(materials);
+                objLoader.setPath('./obj/');
+                objLoader.load('house3.obj', function(object) {     //  加载obj文件
+
+                    //object.rotation.z = Math.PI;
+                    object.position.set(0,0,0);     //  设定坐标点
+                    mesh = object;
+                    scene.add(object);      //  向场景中添加模型
+                    axis.add(object);       //  向旋转坐标系添加模型
+                });
+        });
+
+        // 添加点光源 远距离可作为平行光
+        var light = new THREE.DirectionalLight(0xffffff);//光源颜色
+        light.position.set(20, 10, 5);//光源位置
+        scene.add(light);//光源添加到场景中
+
+        // 添加环境光
+        var ambientLight = new THREE.AmbientLight(0xbebebe);
+        scene.add(ambientLight);
+
+        // 初始化鼠标控制
+        controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+        // 初始化屏幕右下角状态栏
+        stats = new Stats();
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.bottom = '0px';
+        stats.domElement.style.right = '0px';
+        stats.domElement.style.zIndex = 100;
+        document.body.appendChild( stats.domElement );
+
+        // 由球和点构成的坐标点
+        // 警示点
+        var point = new THREE.SphereGeometry(50,32,32);
+        var pointMesh = new THREE.MeshLambertMaterial({color:0xff0000});
+        var MovingCube = new THREE.Mesh( point, pointMesh );
+        MovingCube.position.set(300, 160, 120);
+        scene.add( MovingCube );
+        axis.add(MovingCube);
+        // 显示坐标
+        var geometry = new THREE.ConeGeometry( 50, 140, 32 );
+        var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+        var cone = new THREE.Mesh( geometry, material );
+        cone.position.set(300, 40, 120);
+        cone.rotation.x = Math.PI;
+        scene.add( cone );
+        axis.add( cone );
+
+        // 创建信息框
+        createDiv(232,650,20,0,0,50,
+            '<div class="section"><ul class="clearfix">' +
+            '<li><div class="photo"><p>PM2.5</p><span id="PM">--</span><span>μg/m³</span></div><!--div class="text text1"><p id="PM">--</p></div--></li>' +
+            '<li><div class="photo"><p>降雨量</p><span id="RF">--</span><span>mm</span></div><!--div class="rsp"></div> <div class="text text2"><p id="RF">--</p></div--></li>' +
+            '<li><div class="photo"><p>气压</p><span id="AP">--</span><span>hpa</span></div><!--div class="text text3"><p id="AP">--</p></div--></li>' +
+            '<li><div class="photo"><p>气温</p><span id="TE">--</span><span>℃</span></div><!--div class="text text4"><p id="TE">--</p></div--></li>' +
+            '<li><div class="photo"><p>湿度</p><span id="HU">--</span><span>rh</span></div><!--div class="text text5"><p id="HU">--</p></div--></li>' +
+            '<li><div class="photo"><p>风速</p><span id="WS">--</span><span>m/s</span></div><!--div class="text text6"><p id="WS">--</p></div--></li>' +
+            '</ul></div>');
+
+        // 创建返回
+        createDiv(140,20,0,20,20,0,'<a href="javascript:history.back();" style="color:#eee;font-weight:800;font-size:16px">&lt;&lt;&nbsp;返回</a>');
+
+    }
+
+    // 创建在场景渲染层上的信息框
+    function createDiv(width,height,top,left,bottom,right,html) {
+        var div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.width = width+'px';
+        div.style.height = height+'px';
+        div.style.zIndex = 100;
+        div.style.overflow='hidden';
+        if(top!=0)div.style.top = top+'px';
+        if(left!=0)div.style.left = left+'px';
+        if(bottom!=0)div.style.bottom = bottom+'px';
+        if(right!=0)div.style.right = right+'px';
+        div.innerHTML = html;
+        container.appendChild( div );
+    }
+
+    function draw() {
+        requestAnimationFrame(draw);
+        renderer.render(scene, camera); //  调用WebGLRenderer的render函数刷新场景
+            axis.rotation.y += 0.001;   //  旋转坐标系
+            if (axis.rotation.y > Math.PI * 2) {
+                axis.rotation.y -= Math.PI * 2;
+            }
+        update();
+    }
+
+    function update() {
+        controls.update();
+        stats.update();
+    }
+
+    window.onload = function(){
+        init();
+        draw();
+    }
+</script>
+</body>
+</html>

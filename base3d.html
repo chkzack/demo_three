@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>仓管示例</title>
+    <script src="./js/jquery-1.10.2.min.js"></script>
+    <script src="./js/three.js"></script>
+    <script src="./js/Detector.js"></script>
+    <script src="./js/Stats.js"></script>
+    <script src="./js/OrbitControls.js"></script>
+    <script src="./js/THREEx.FullScreen.js"></script>
+    <script src="./js/THREEx.WindowResize.js"></script>
+    <link rel="stylesheet" href="css/base3d.css"/>
+</head>
+<body>
+<script>
+    // standard global variables
+    var container, scene, camera, renderer, controls, stats; // projector
+    //var keyboard = new THREEx.KeyboardState();
+    var clock = new THREE.Clock();
+    // custom global variables
+    var MovingCube;
+    // AXIS
+    var axis = new THREE.Object3D();
+    axis.position.x =0;
+    axis.position.y =0;
+    axis.position.z =0;
+    var widthRate,heightRate;
+	var mouse = new THREE.Vector2(),
+        offset = new THREE.Vector3(),
+        INTERSECTED, SELECTED, LASTUUID="", JSONDATA;
+    //objects是指场景中的实体集合  plane是一个水平面网格，当选中一个物体时，可以通过这个水平面，看到和它在同一平面内的其他物理
+    var objects = [], plane;
+
+    // FUNCTIONS
+    function init() {
+    	//创建一个放置webGL的层
+        container = document.body;
+        //创建渲染器
+        renderer = new THREE.WebGLRenderer( { alpha:true, antialias: true } );
+        renderer.setSize(window.innerWidth-20, window.innerHeight-20);
+        //是否排列对象 默认是true
+        renderer.sortObjects = false;
+        //是否启用阴影地图
+        renderer.shadowMap.enabled = true;
+        //设置阴影地图是纹理阴影
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        //将渲染标签放到容器里
+        container.appendChild( renderer.domElement );
+        
+        //创建一个屏幕和场景转换工具
+        //projector = new THREE.Projector();
+        
+        //显示了一个右下角的性能监视窗口
+        stats = new Stats();
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.top = '20px';
+        stats.domElement.style.left = '20px';
+        container.appendChild( stats.domElement );
+		
+        //加入鼠标拖动对象的一系列监听事件
+        renderer.domElement.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        renderer.domElement.addEventListener( 'mousedown', onDocumentMouseDown, false );
+        renderer.domElement.addEventListener( 'mouseup', onDocumentMouseUp, false );
+             
+        //添加事件
+        THREEx.WindowResize(renderer, camera);
+        THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+        
+        //添加场景
+        scene = new THREE.Scene();
+        //scene.background = new THREE.ImageUtils.loadTexture( 'img/background1.jpg' )
+        scene.background = new THREE.Color(0x555555); //0x9cd3f2
+        scene.add(axis);
+        
+        //添加相机
+        var SCREEN_WIDTH = window.innerWidth-20, SCREEN_HEIGHT = window.innerHeight-20;
+        var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 2000;
+        camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+        scene.add(camera);
+        camera.position.set(65,80,125);
+        camera.lookAt(scene.position);
+        
+        //添加相机控制
+        controls = new THREE.OrbitControls( camera, renderer.domElement );
+        controls.userZoom = false;
+        controls.userPan = false;
+
+        //添加光源
+        var light = new THREE.PointLight(0xffffff);
+        light.position.set(0,10000,0);
+        scene.add(light);
+        var Amlight = new THREE.AmbientLight( 0xffffff ); // soft white light
+        scene.add( Amlight );
+        
+        //添加平面
+        //创建一个长2000宽2000，8*8的网格对象并加上一种基本材质
+        plane = new THREE.Mesh( new THREE.PlaneGeometry( 2000, 2000, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true, wireframe: false } ) );
+        //网格对象是否可见
+        plane.visible = true;
+        //把网格对象加到场景中
+        plane.position.y = -0.5;
+        plane.rotation.x = Math.PI / 2;
+        scene.add( plane );
+        
+        // 仓库
+        var baseStat={
+			x:350,  //  长
+			y:350,  //  宽
+			z:150   //  高
+		}
+        var floorTexture = new THREE.TextureLoader().load( 'img/block.jpg' );
+        floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+        floorTexture.repeat.set( 20, 20 );
+        var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+        var boxArray= [];
+        boxArray.push(new THREE.MeshBasicMaterial( { color:0xeeeeee, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//左
+        boxArray.push(new THREE.MeshBasicMaterial( { color:0xeeeeee, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//右
+        boxArray.push(new THREE.MeshBasicMaterial( { color:0xeeeeee, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//上
+        boxArray.push( floorMaterial );	//下
+        boxArray.push(new THREE.MeshBasicMaterial( { color:0xeeeeee, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//前
+        boxArray.push(new THREE.MeshBasicMaterial( { color:0xeeeeee, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//后
+        
+        var base = new THREE.BoxBufferGeometry( baseStat.x, baseStat.z, baseStat.y, 3, 1, 3);	
+        MovingCube = new THREE.Mesh( base, boxArray );
+        MovingCube.position.set(0,baseStat.z/2,0);
+        scene.add( MovingCube );
+        axis.add(MovingCube);
+        
+        // 货架
+        var goodStat={
+        	x:20,  // 长
+			y:70,  // 宽
+			z:10   // 高
+        }
+        // 
+        var goodsShelf = new THREE.BoxBufferGeometry( goodStat.x, goodStat.z, goodStat.y, 5, 1, 14);
+        // 2排
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-100, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-60, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-20, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(20, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(60, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(100, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        // 3排
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-100, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y/2+10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-60, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y/2+10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-20, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y/2+10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(20, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y/2+10);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(60, goodStat.z/2+i*(goodStat.z+0.01), (goodStat.y/2+10));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(100, goodStat.z/2+i*(goodStat.z+0.01), (goodStat.y/2+10));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        // 1排
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-100, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-60, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(-20, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(20, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(60, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+        for(var i=0;i<4;i++){
+            MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
+            MovingCube.position.set(100, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            //放到对象数组中
+            objects.push( MovingCube );
+        }
+
+    }
+	
+	// 创建各自的贴图素材
+	function constructOwnMaterial(){
+		var materialArray = new Array();
+        materialArray.push(new THREE.MeshBasicMaterial( { color:0x5fa8df, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//左
+        materialArray.push(new THREE.MeshBasicMaterial( { color:0x5fa8df, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//右
+        materialArray.push(new THREE.MeshBasicMaterial( { color:0xdddddd, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//上
+        materialArray.push(new THREE.MeshBasicMaterial( { color:0xbbbbbb, transparent:true, opacity: 1, side: THREE.DoubleSide}));	//下
+        materialArray.push(new THREE.MeshBasicMaterial( { color:0x5fa8df, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//前
+        materialArray.push(new THREE.MeshBasicMaterial( { color:0x5fa8df, transparent:true, opacity: 0.7, side: THREE.DoubleSide}));	//后
+		return materialArray;
+	}
+	
+    // 当鼠标移动时触发的事件
+    function onDocumentMouseMove( event ) {
+        //阻止本来的默认事件，比如浏览器的默认右键事件是弹出浏览器的选项
+        event.preventDefault();
+            
+        //mouse.x是指 鼠标的x到屏幕y轴的距离与屏幕宽的一半的比值 绝对值不超过1
+        //mouse.y是指 鼠标的y到屏幕x轴的距离与屏幕宽的一半的比值 绝对值不超过1
+        //
+        //下面的矩形是显示器屏幕，三维空间坐标系的布局以及屏幕的二维坐标系
+        //
+        // 鼠标是从  二维坐标系
+        // 这个点 .-------------------------------------------|-->鼠标x正半轴
+        //  开始算|                   个 y     /              |
+        //   x,y  |                    |     /                |
+        //        |                    |   /                  |
+        //        |          三维坐标系| /                    |
+        //        | -------------------/-------------------->x|
+        //        |                  / |                      |
+        //        |                /   |                      |
+        //        |              /     |                      |
+        //        |__________Z_匕______|______________________|
+        //        |
+        // 鼠标y  \/
+        // 正半轴
+        mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+        /*
+          鼠标移动时不进行计算
+          只更新鼠标坐标
+        */
+        //新建一个三维变换半单位向量 假设z方向就是0.5,这样我左右移的时候，还会有前后移的效果
+        //var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+            
+        //屏幕和场景转换工具根据照相机，把这个向量从屏幕转化为场景中的向量
+        //projector.unprojectVector( vector, camera );
+        //vector.unproject( camera );
+        //变换过后的向量vector减去相机的位置向量后标准化
+        //vector.sub( camera.position ).normalize();
+        //新建一条从相机的位置到vector向量的一道光线
+        //var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+        //var intersects = raycaster.intersectObjects( objects );
+
+        /* if ( intersects.length > 0 ) {
+            container.style.cursor = 'pointer';
+        }else{
+            container.style.cursor = 'auto';
+        }
+        */
+    }
+	
+    function onDocumentMouseDown( event ) {
+        //阻止本来的默认事件，比如浏览器的默认右键事件是弹出浏览器的选项
+        event.preventDefault();
+
+        if(event.button == 0){  // 右键
+
+            if(SELECTED!=null || SELECTED!=undefined){
+                document.getElementById("messageBox").style.display="none";
+                SELECTED.material[0].color.setHex( 0x5fa8df );
+                SELECTED.material[1].color.setHex( 0x5fa8df );
+                SELECTED.material[4].color.setHex( 0x5fa8df );
+                SELECTED.material[5].color.setHex( 0x5fa8df );
+                SELECTED = null;
+            }
+
+            var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+            //console.log(vector);
+            //projector.unprojectVector( vector, camera );
+            vector.unproject( camera );
+            var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+            var intersects = raycaster.intersectObjects( objects );
+
+            if ( intersects.length > 0 ) {
+                //不能改变视角了
+                controls.enabled = false;
+                //把选中的对象放到全局变量SELECTED中
+                SELECTED = intersects[ 0 ].object;
+                //console.log(SELECTED);
+                SELECTED.material[0].color.setHex( 0xff1010 );
+                SELECTED.material[1].color.setHex( 0xff1010 );
+                SELECTED.material[4].color.setHex( 0xff1010 );
+                SELECTED.material[5].color.setHex( 0xff1010 );
+                //再和水平面相交
+                var intersects = raycaster.intersectObject( plane );
+
+                //选中位置和水平面位置（物体中心）的偏移量
+                //offset.copy( intersects[0].point ).sub( plane.position );
+                //改变鼠标的样式
+                container.style.cursor = 'pointer';
+
+                var messageBox = document.getElementById("messageBox");
+                if(messageBox==null || messageBox==undefined){
+                    createDiv(500, 400, window.innerHeight/2-200, window.innerWidth/2-250, 0, 0, createMessageTable());
+                }else{
+                    if(LASTUUID != SELECTED.uuid){
+                        LASTUUID = SELECTED.uuid;
+                        changeData();
+                    }
+                    messageBox.style.display="block";
+                }
+            }
+        }
+    }
+    
+    function onDocumentMouseUp( event ) {
+        // 屏蔽本身方法
+        event.preventDefault();
+        //又能改变视角了
+        controls.enabled = true;
+
+        //如果有相交物体
+        //if ( INTERSECTED ) {}
+        /*
+        if (SELECTED != null || SELECTED != undefined) {
+
+            SELECTED.material[0].color.setHex(0x5fa8df);
+            SELECTED.material[1].color.setHex(0x5fa8df);
+            SELECTED.material[4].color.setHex(0x5fa8df);
+            SELECTED.material[5].color.setHex(0x5fa8df);
+            SELECTED = null;
+        }
+        //改变鼠标的样式
+        container.style.cursor = 'auto';
+        var messageBox = document.getElementById("messageBox");
+        if (messageBox == null || messageBox == undefined) {
+
+        } else {
+            messageBox.style.display = "none";
+        }
+        */
+    }
+	
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);//调用WebGLRenderer的render函数刷新场景
+        update();
+    }
+
+    function update() {
+        controls.update();
+        stats.update();
+    }
+
+    function render() {
+        renderer.render( scene, camera );
+    }
+
+    function createDiv(width,height,top,left,bottom,right,html) {
+        var div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.width = width+'px';
+        div.style.height = height+'px';
+        div.style.zIndex = 100;
+        div.style.overflow='hidden';
+        if(top!=0)div.style.top = top+'px';
+        if(left!=0)div.style.left = left+'px';
+        if(bottom!=0)div.style.bottom = bottom+'px';
+        if(right!=0)div.style.right = right+'px';
+        div.innerHTML = html;
+        container.appendChild( div );
+    }
+
+    function changeData(){
+        var random = 3*Math.random() >> 0;
+        var dataList = JSONDATA[random];
+        $("#tbody").empty();
+        var trs = "";
+        for(var i=0;i<dataList.length;i++){
+            trs += "<tr><td>"+dataList[i].name+"</td><td>"+dataList[i].mount+"</td><td>"+dataList[i].date+"</td><td>"+dataList[i].incharge+"</td></tr>";
+        }
+        $("#tbody").append(trs);
+    }
+
+    function createMessageTable(){
+    	var message = '';
+    	message += '<div id="messageBox" class="messagebox"><h2>当前存储状况：<span style="float:right;color: #fe0000;display: block" onmousedown="close();">X</span></h2>';
+    	message += '<table><thead>';
+        message += '<tr><td>类目</td><td>库存数量</td><td>录入时间</td><td>负责人</td></tr>';
+        message += '</thead>';
+        message += '<tbody id="tbody">';
+        message += '<tr><td>华为P20</td><td>300</td><td>2017-11-01</td><td>张三</td></tr>';
+        message += '<tr><td>小米8</td><td>500</td><td>2017-11-24</td><td>李四</td></tr>';
+        message += '<tr><td>OPPO10</td><td>130</td><td>2017-11-01</td><td>张三</td></tr>';
+        message += '<tr><td>苹果iphoneX</td><td>250</td><td>2017-11-11</td><td>张三</td></tr>';
+        message += '<tr><td>三星Galaxy7</td><td>143</td><td>2017-11-24</td><td>李四</td></tr>';
+        message += '</tbody></table></div>';
+        return message;
+    }
+
+    // 初始化各类参数
+    $(document).ready(function(){
+        init();
+        animate();
+
+        // 禁用右键菜单
+        document.oncontextmenu = function(){
+            return false;
+        }
+        // TEMPRATURE
+        createDiv(132,650,20,0,0,20,
+            '<div class="section"><ul class="clearfix">' +
+            '<li><div class="photo"><p>PM2.5</p><span id="PM">--</span><span>μg/m³</span></div></li>' +
+            '<li><div class="photo"><p>气压</p><span id="AP">--</span><span>hpa</span></div></li>' +
+            '<li><div class="photo"><p>气温</p><span id="TE">--</span><span>℃</span></div></li>' +
+            '<li><div class="photo"><p>湿度</p><span id="HU">--</span><span>rh</span></div></li>' +
+            '</ul></div>');
+
+        // HISTORY BACK
+        createDiv(140,20,0,20,20,0,'<a href="javascript:history.back();" style="color:#999;font-weight:800;font-size:16px">&lt;&lt;&nbsp;返回</a>');
+
+        // 加载json数据
+        $.post("./json/data.json",function(data){
+            JSONDATA = data;
+        })
+    });
+</script>
+</body>
+</html>

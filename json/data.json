@@ -1,0 +1,89 @@
+[
+  [
+    {
+      "name": "华为P20",
+      "mount": 250,
+      "date": "2017-11-01",
+      "incharge": "张三"
+    },
+    {
+      "name": "小米6",
+      "mount": 300,
+      "date": "2017-11-01",
+      "incharge": "李四"
+    },{
+      "name": "VIVO NEX",
+      "mount": 300,
+      "date": "2017-11-01",
+      "incharge": "张三"
+    },{
+      "name": "苹果iphoneX",
+      "mount": 149,
+      "date": "2017-11-01",
+      "incharge": "张三"
+    },{
+      "name": "三星Galaxy7",
+      "mount": 150,
+      "date": "2017-11-01",
+      "incharge": "张三"
+    }
+  ],
+  [
+    {
+      "name": "华为荣耀10",
+      "mount": 150,
+      "date": "2017-10-30",
+      "incharge": "张三"
+    },
+    {
+      "name": "小米Mix",
+      "mount": 250,
+      "date": "2017-10-08",
+      "incharge": "李四"
+    },{
+    "name": "苹果iphoneSE2",
+    "mount": 100,
+    "date": "2017-09-30",
+    "incharge": "王五"
+    },{
+      "name": "苹果iphone8",
+      "mount": 149,
+      "date": "2017-08-08",
+      "incharge": "张三"
+    },{
+      "name": "三星Galaxy5",
+      "mount": 100,
+      "date": "2017-07-01",
+      "incharge": "张三"
+    }
+  ],
+  [
+    {
+      "name": "华为P10",
+      "mount": 50,
+      "date": "2017-12-01",
+      "incharge": "张三"
+    },
+    {
+      "name": "红米5",
+      "mount": 200,
+      "date": "2017-11-05",
+      "incharge": "李四"
+    },{
+      "name": "一加5",
+      "mount": 200,
+      "date": "2017-08-01",
+      "incharge": "张三"
+    },{
+      "name": "苹果iphone8plus",
+      "mount": 249,
+      "date": "2017-08-10",
+      "incharge": "张三"
+    },{
+      "name": "锤子坚果3",
+      "mount": 180,
+      "date": "2017-11-24",
+      "incharge": "王五"
+    }
+  ]
+]

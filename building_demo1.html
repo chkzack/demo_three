@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>示例1</title>
+        <script src="./js/jquery-1.10.2.min.js"></script>
+        <script src="./js/three.js"></script>
+        <script src="./js/Detector.js"></script>
+        <script src="./js/Stats.js"></script>
+        <script src="./js/OrbitControls.js"></script>
+        <script src="./js/THREEx.KeyboardState.js"></script>
+        <script src="./js/THREEx.FullScreen.js"></script>
+        <script src="./js/THREEx.WindowResize.js"></script>
+        <link rel="stylesheet" href="css/common.css"/>
+    </head>
+    <body>
+        <script>
+        // 全局参数
+        var container, scene, camera, renderer, controls, stats;
+        var keyboard = new THREEx.KeyboardState();
+        var clock = new THREE.Clock();
+        var MovingCube;
+        // AXIS 旋转轴
+        var axis = new THREE.Object3D();
+        axis.position.x =0;
+        axis.position.y =0;
+        axis.position.z =0;
+        var widthRate,heightRate;
+
+        // FUNCTIONS
+        function init() {
+            // RENDERER 渲染器
+            if ( Detector.webgl )
+                renderer = new THREE.WebGLRenderer( {antialias:true} );
+            else
+                renderer = new THREE.CanvasRenderer();
+            renderer.setSize(window.innerWidth-20, window.innerHeight-20);
+
+            // CONTAINER DOM容器
+            container = document.body; //document.getElementById( 'ThreeJS' );
+            container.appendChild( renderer.domElement );
+
+            // SCENE 场景
+            scene = new THREE.Scene();
+            //scene.background = new THREE.ImageUtils.loadTexture( 'img/background1.jpg' )
+            scene.background = new THREE.Color(0x555555); //0x9cd3f2
+            scene.add(axis);
+
+            // CAMERA 相机
+            var SCREEN_WIDTH = window.innerWidth-20, SCREEN_HEIGHT = window.innerHeight-20;
+            var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+            camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+            scene.add(camera);
+            camera.position.set(250,170,250);
+            camera.lookAt(scene.position);
+
+            // LIGHT 点光源
+            var light = new THREE.PointLight(0xffffff);
+            light.position.set(0,10000,0);
+            scene.add(light);
+
+            // Amlight 环境光
+            //var Amlight = new THREE.AmbientLight( 0xffffff ); // soft white light
+            //scene.add( Amlight );
+
+            // CONTROLS
+            controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+            // STATS
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.top = '10px';
+            stats.domElement.style.left = '10px';
+            stats.domElement.style.zIndex = 100;
+            container.appendChild( stats.domElement );
+
+            // FLOOR 平面
+            var floorTexture = new THREE.TextureLoader().load( 'img/block.jpg' );
+            floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+            floorTexture.repeat.set( 20, 20 );
+            var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+            var floorGeometry = new THREE.PlaneGeometry(200, 200, 20, 20);
+            var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.position.y = -0.5;
+            floor.rotation.x = Math.PI / 2;
+            scene.add(floor); // MATERIAL
+            axis.add(floor);
+
+            // BUILDING MATERIAL 1
+            var building_window = new THREE.TextureLoader().load( 'img/glass1_1.jpg' );
+            building_window.wrapS = building_window.wrapT = THREE.RepeatWrapping;
+            building_window.repeat.set( 2, 1);
+            var top_glass = new THREE.TextureLoader().load( 'img/glass.png' )
+            top_glass.wrapS = top_glass.wrapT = THREE.RepeatWrapping;
+            top_glass.repeat.set(3,3);
+            var bottom_floor = new THREE.TextureLoader().load( 'img/block3.jpg' )
+            bottom_floor.wrapS = bottom_floor.wrapT = THREE.RepeatWrapping;
+            bottom_floor.repeat.set(2,2);
+
+            var materialArray = [];
+            materialArray.push(new THREE.MeshBasicMaterial( { map:building_window, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//left 左
+            materialArray.push(new THREE.MeshBasicMaterial( { map:building_window, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//right 右
+            materialArray.push(new THREE.MeshBasicMaterial( { map:top_glass, transparent:true, opacity: 0.2, side: THREE.DoubleSide}));			//top 上
+            materialArray.push(new THREE.MeshBasicMaterial( { map:bottom_floor, transparent:true, opacity: 1, side: THREE.DoubleSide}));			//bottom 下
+            materialArray.push(new THREE.MeshBasicMaterial( { map:building_window, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//front 前
+            materialArray.push(new THREE.MeshBasicMaterial( { map:building_window, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//end 后
+
+            // BUILDING1
+            var building1 = new THREE.BoxGeometry( 30, 10, 30, 3, 1, 3);	//10F
+            for(var i=0;i<8;i++){
+                MovingCube = new THREE.Mesh( building1, materialArray );
+                MovingCube.position.set(-40, 5+i*10.1, -60);
+                scene.add( MovingCube );
+                axis.add(MovingCube);
+            }
+
+            // BUILDING2
+            var building2 = new THREE.BoxGeometry( 40, 10, 40, 4, 1, 4);	//12F
+            for(var i=0;i<10;i++){
+                MovingCube = new THREE.Mesh( building2, materialArray );
+                MovingCube.position.set(-55, 5+i*10.1, 20);
+                scene.add( MovingCube);
+                axis.add(MovingCube);
+            }
+
+            // BUILDING3
+            // BUILDING MATERIAL 2
+            var textureLoader = new THREE.TextureLoader();
+            var building_window2 = textureLoader.load( 'img/wall_test.png' );
+            building_window2.wrapS = building_window2.wrapT = THREE.RepeatWrapping;
+            building_window2.repeat.set(2,0.67);
+            var building_window3 = textureLoader.load( 'img/wall_test.png' );
+            building_window3.wrapS = building_window3.wrapT = THREE.RepeatWrapping;
+            building_window3.repeat.set(4,0.67);
+            var top_glass2 = textureLoader.load( 'img/glass.png' )
+            top_glass2.wrapS = top_glass2.wrapT = THREE.RepeatWrapping;
+            top_glass2.repeat.set(5,14);
+            var bottom_floor2 = textureLoader.load( 'img/block3.jpg' )
+            bottom_floor2.wrapS = bottom_floor2.wrapT = THREE.RepeatWrapping;
+            bottom_floor2.repeat.set(5,14);
+
+            var materialArray1 = [];
+            materialArray1.push(new THREE.MeshBasicMaterial( { map:building_window3, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//左
+            materialArray1.push(new THREE.MeshBasicMaterial( { map:building_window3, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//右
+            materialArray1.push(new THREE.MeshBasicMaterial( { map:top_glass2, transparent:true, opacity: 0.2, side: THREE.DoubleSide}));		//上
+            materialArray1.push(new THREE.MeshBasicMaterial( { map:bottom_floor2, transparent:true, opacity: 1, side: THREE.DoubleSide}));		//下
+            materialArray1.push(new THREE.MeshBasicMaterial( { map:building_window2, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//前
+            materialArray1.push(new THREE.MeshBasicMaterial( { map:building_window2, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//后
+
+            // BUILDING3
+            var building3 = new THREE.BoxGeometry( 50, 10, 140, 5, 1, 14);	 //3F left
+            for(var i=0;i<3;i++){
+                MovingCube = new THREE.Mesh( building3, materialArray1 );
+                MovingCube.position.set(-40, 5+i*10.1, 0);
+                scene.add( MovingCube );
+                axis.add(MovingCube);
+            }
+            // BUILDING4
+            for(var i=0;i<3;i++){
+                MovingCube = new THREE.Mesh( building3, materialArray1 );  //3F right
+                MovingCube.position.set(40, 5+i*10.1, 0);
+                scene.add( MovingCube);
+                axis.add(MovingCube);
+            }
+
+            // BUILDING5
+            var building5 = new THREE.BoxGeometry( 30, 10, 30, 3, 1, 3);	//5F
+            for(var i=0;i<5;i++){
+                MovingCube = new THREE.Mesh( building5, materialArray );
+                MovingCube.position.set(0, 5+i*10.1, 70);
+                scene.add( MovingCube);
+                axis.add(MovingCube);
+            }
+
+            // BUILDING6
+            for(var i=0;i<4;i++){
+                MovingCube = new THREE.Mesh( building5, materialArray );
+                MovingCube.position.set(60, 5+i*10.1, -30);
+                scene.add( MovingCube);
+                axis.add(MovingCube);
+            }
+
+            // BUILDING MATERIAL 3
+            var top_glass7 = new THREE.TextureLoader().load( 'img/glass.png' );
+            top_glass7.wrapS = top_glass7.wrapT = THREE.RepeatWrapping;
+            top_glass7.repeat.set(3,2);
+            var building_window7 = new THREE.TextureLoader().load( 'img/glass2_5.jpg' );
+            building_window7.wrapS = building_window7.wrapT = THREE.RepeatWrapping;
+            building_window7.repeat.set(6,1);
+
+            var materialArray2 = [];
+            materialArray2.push(new THREE.MeshBasicMaterial( { map:building_window7, transparent:true, opacity: 0.0, side: THREE.DoubleSide}));	//左
+            materialArray2.push(new THREE.MeshBasicMaterial( { map:building_window7, transparent:true, opacity: 0.0, side: THREE.DoubleSide}));	//右
+            materialArray2.push(new THREE.MeshBasicMaterial( { map:top_glass7, transparent:true, opacity: 0.2, side: THREE.DoubleSide}));		//上
+            materialArray2.push(new THREE.MeshBasicMaterial( { map:bottom_floor, transparent:true, opacity: 1, side: THREE.DoubleSide}));		//下
+            materialArray2.push(new THREE.MeshBasicMaterial( { map:building_window7, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//前
+            materialArray2.push(new THREE.MeshBasicMaterial( { map:building_window7, transparent:true, opacity: 0.75, side: THREE.DoubleSide}));	//后
+
+            // BUILDING7
+            var building7 = new THREE.BoxGeometry( 30, 10, 20, 3, 1, 2);	//3F
+            for(var i=0;i<3;i++){
+                MovingCube = new THREE.Mesh( building7, materialArray2 );
+                MovingCube.position.set(0, 5+i*10.1, 0);
+                scene.add( MovingCube);
+                axis.add(MovingCube);
+            }
+
+            // WARNING POINT
+            var point = new THREE.SphereGeometry(1,32,32);
+            var pointMesh = new THREE.MeshLambertMaterial({color:0xff0000});
+            MovingCube = new THREE.Mesh( point, pointMesh );
+            MovingCube.position.set(30, 25, 20);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            // SHOW POSITION
+            var geometry = new THREE.ConeGeometry( 1, 4, 32 );
+            var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+            var cone = new THREE.Mesh( geometry, material );
+            cone.position.set(30, 22, 20);
+            cone.rotation.x = Math.PI;
+            scene.add( cone );
+            axis.add(cone);
+
+            // WARNING POINT 1
+            var point = new THREE.SphereGeometry(1,32,32);
+            var pointMesh = new THREE.MeshLambertMaterial({color:0xff0000});
+            MovingCube = new THREE.Mesh( point, pointMesh );
+            MovingCube.position.set(0, 45, 65);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            // SHOW POSITION
+            var geometry = new THREE.ConeGeometry( 1, 4, 32 );
+            var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+            var cone = new THREE.Mesh( geometry, material );
+            cone.position.set(0, 42, 65);
+            cone.rotation.x = Math.PI;
+            scene.add( cone );
+            axis.add(cone);
+
+            // WARNING POINT 2
+            var point = new THREE.SphereGeometry(1,32,32);
+            var pointMesh = new THREE.MeshLambertMaterial({color:0xff0000});
+            MovingCube = new THREE.Mesh( point, pointMesh );
+            MovingCube.position.set(50, 35, -35);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            // SHOW POSITION
+            var geometry = new THREE.ConeGeometry( 1, 4, 32 );
+            var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+            var cone = new THREE.Mesh( geometry, material );
+            cone.position.set(50, 32, -35);
+            cone.rotation.x = Math.PI;
+            scene.add( cone );
+            axis.add(cone);
+
+            // WARNING POINT 3
+            var point = new THREE.SphereGeometry(1,32,32);
+            var pointMesh = new THREE.MeshLambertMaterial({color:0xff0000});
+            MovingCube = new THREE.Mesh( point, pointMesh );
+            MovingCube.position.set(-50, 65, 20);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            // SHOW POSITION
+            var geometry = new THREE.ConeGeometry( 1, 4, 32 );
+            var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+            var cone = new THREE.Mesh( geometry, material );
+            cone.position.set(-50, 62, 20);
+            cone.rotation.x = Math.PI;
+            scene.add( cone );
+            axis.add(cone);
+
+            // WARNING POINT 4
+            var point = new THREE.SphereGeometry(1,32,32);
+            var pointMesh = new THREE.MeshLambertMaterial({color:0xff0000});
+            MovingCube = new THREE.Mesh( point, pointMesh );
+            MovingCube.position.set(-40, 45, -60);
+            scene.add( MovingCube );
+            axis.add(MovingCube);
+            // SHOW POSITION
+            var geometry = new THREE.ConeGeometry( 1, 4, 32 );
+            var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+            var cone = new THREE.Mesh( geometry, material );
+            cone.position.set(-40, 42, -60);
+            cone.rotation.x = Math.PI;
+            scene.add( cone );
+            axis.add(cone);
+
+            // EVENTS
+            THREEx.WindowResize(renderer, camera);
+            THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);//调用WebGLRenderer的render函数刷新场景
+            axis.rotation.y += 0.001;  //添加动画
+            if (axis.rotation.y > Math.PI * 2) {
+                axis.rotation.y -= Math.PI * 2;
+            }
+            update();
+        }
+
+        function update() {
+            controls.update();
+            stats.update();
+        }
+
+        function render() {
+            renderer.render( scene, camera );
+        }
+
+        $(document).ready( function() {
+            init();
+            animate();
+
+            // 创建信息框
+            function createDiv(width,height,top,left,bottom,right,html){
+                var div = document.createElement('div');
+                div.style.position = 'absolute';
+                div.style.width = width+'px';
+                div.style.height = height+'px';
+                div.style.zIndex = 100;
+                div.style.overflow='hidden';
+                if(top!=0)div.style.top = top+'px';
+                if(left!=0)div.style.left = left+'px';
+                if(bottom!=0)div.style.bottom = bottom+'px';
+                if(right!=0)div.style.right = right+'px';
+                div.innerHTML = html;
+                container.appendChild( div );
+            }
+
+            // TEMPRATURE
+            createDiv(232,650,20,0,0,50,
+                '<div class="section"><ul class="clearfix">' +
+                '<li><div class="photo"><p>PM2.5</p><span id="PM">--&nbsp;</span><span>μg/m³</span></div></li>' +
+                '<li><div class="photo"><p>降雨量</p><span id="RF">--</span><span>mm</span></div></li>' +
+                '<li><div class="photo"><p>气压</p><span id="AP">--</span><span>hpa</span></div></li>' +
+                '<li><div class="photo"><p>气温</p><span id="TE">--</span><span>℃</span></div></li>' +
+                '<li><div class="photo"><p>湿度</p><span id="HU">--</span><span>rh</span></div></li>' +
+                '<li><div class="photo"><p>风速</p><span id="WS">--</span><span>m/s</span></div></li>' +
+                '</ul></div>');
+
+            // HISTORY BACK
+            createDiv(140,20,0,20,20,0,'<a href="javascript:history.back();" style="color:#eee;font-weight:800;font-size:16px">&lt;&lt;&nbsp;返回</a>');
+        });
+        </script>
+    </body>
+</html>
