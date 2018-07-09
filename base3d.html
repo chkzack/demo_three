@@ -17,15 +17,13 @@
     var container, scene, camera, renderer, controls, stats; // projector
     //var keyboard = new THREEx.KeyboardState();
     var clock = new THREE.Clock();
-    // custom global variables
-    var MovingCube;
     // AXIS
     var axis = new THREE.Object3D();
     axis.position.x = 0;
     axis.position.y = 0;
     axis.position.z = 0;
     var widthRate,heightRate;
-	var mouse = new THREE.Vector2(),
+    var mouse = new THREE.Vector2(),
         offset = new THREE.Vector3(),
         INTERSECTED, SELECTED, LASTUUID = "", JSONDATA;
     //objects是指场景中的实体集合  plane是一个水平面网格，当选中一个物体时，可以通过这个水平面，看到和它在同一平面内的其他物理
@@ -33,7 +31,7 @@
 
     // FUNCTIONS
     function init() {
-    	//创建一个放置webGL的层
+        //创建一个放置webGL的层
         container = document.body;
         //创建渲染器
         renderer = new THREE.WebGLRenderer( { alpha:true, antialias: true } );
@@ -53,427 +51,335 @@
 
         //创建一个屏幕和场景转换工具
         //projector = new THREE.Projector();
-        
+
         //显示了一个右下角的性能监视窗口
-        stats = new Stats();
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.top = '20px';
-        stats.domElement.style.left = '20px';
-        container.appendChild( stats.domElement );
-             
+        // stats = new Stats();
+        // stats.domElement.style.position = 'absolute';
+        // stats.domElement.style.top = '20px';
+        // stats.domElement.style.left = '20px';
+        // container.appendChild( stats.domElement );
+
         //添加事件
         THREEx.WindowResize(renderer, camera);
         THREEx.FullScreen.bindKey({ charCode: 'm'.charCodeAt(0) });
-        
+
         //添加场景
         scene = new THREE.Scene();
         //scene.background = new THREE.ImageUtils.loadTexture( 'img/background1.jpg' )
         scene.background = new THREE.Color(0x555555); //0x9cd3f2
         scene.add(axis);
-        
+
         //添加相机
         var SCREEN_WIDTH = window.innerWidth-20, SCREEN_HEIGHT = window.innerHeight-20;
-        var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 2000;
+        var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 1, FAR = 3000;
         camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
         scene.add(camera);
         camera.position.set( 500, 300, 400 );
         camera.lookAt(scene.position);
-        
+
         //添加自定义控制
         controls = new THREE.OrbitControls( camera, renderer.domElement );
 
         //添加光源
-        var outterLight1 = new THREE.PointLight( 0xcccccc, 0.5);
-        outterLight1.position.set( 1000, 1000, 1000);
+        var outterLight1 = new THREE.PointLight( 0xdddddd, 0.8);
+        outterLight1.position.set( 10000, 4000, 10000);
         scene.add(outterLight1);
-        var outterLight2 = new THREE.PointLight( 0xcccccc, 0.5);
-        outterLight2.position.set( -1000, 1000, -1000);
+        var outterLight2 = new THREE.PointLight( 0xdddddd, 0.8);
+        outterLight2.position.set( -10000, 4000, -10000);
         scene.add(outterLight2);
         var innnerLight = new THREE.PointLight( 0xdcdccc, 0.3);
         innnerLight.position.set( 0, 150, 0);
         scene.add(innnerLight);
         var Amlight = new THREE.AmbientLight( 0xeeeeee, 0.5 ); // soft white light
         scene.add( Amlight );
-        
+
         //添加平面
         //创建一个长2000宽2000，8*8的网格对象并加上一种基本材质
-        plane = new THREE.Mesh( new THREE.PlaneGeometry( 420, 420, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0x81bf5f, opacity: 1, transparent: false, wireframe: false, side: THREE.DoubleSide } ) );
+        plane = new THREE.Mesh( new THREE.PlaneGeometry( 500, 500, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0x81bf5f, opacity: 1, transparent: false, wireframe: false, side: THREE.DoubleSide } ) );
         //网格对象是否可见
         plane.visible = true;
         //把网格对象加到场景中
         plane.position.y = -0.9;
         plane.rotation.x = Math.PI / 2;
-        scene.add( plane );
-        
-        // 仓库
-        var baseStat={
-			x:350,  //  长
-			y:350,  //  宽
-			z:150   //  高
-		}
-        var floorTexture = new THREE.TextureLoader().load( 'img/block.jpg' );
-        floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-        floorTexture.repeat.set( 20, 20 );
-        var floorMaterial = new THREE.MeshLambertMaterial( { map: floorTexture, side: THREE.DoubleSide } );
-        var defaultMaterial = new THREE.MeshLambertMaterial( { color: 0xbbbbbb, transparent: true, opacity: 1, side: THREE.DoubleSide } );
-        var baseMaterialArray = [defaultMaterial, defaultMaterial, defaultMaterial, floorMaterial, defaultMaterial, defaultMaterial];  // 左右上下前后
-        
-        var base = new THREE.BoxBufferGeometry( baseStat.x, baseStat.z, baseStat.y, 3, 1, 3);	
-        MovingCube = new THREE.Mesh( base, baseMaterialArray );
-        MovingCube.position.set( 0, baseStat.z/2, 0);
-        scene.add( MovingCube );
-        axis.add( MovingCube );
+        addModule( plane );
 
-        // 仓库顶
-        var baseTopMaterialArray = [defaultMaterial, defaultMaterial, defaultMaterial, defaultMaterial, defaultMaterial, defaultMaterial];
-        var baseTop = new THREE.Mesh( new THREE.BoxBufferGeometry( 365, 10, 365, 3, 1, 3), baseTopMaterialArray );
-        baseTop.position.set( 0, 155, 0);
-        scene.add( baseTop );
-        axis.add( baseTop );
+        // 添加路面
+        var road = createRoad();
+        road.rotation.x = -Math.PI / 2;
+        road.position.set( 0, 0.5, 215 );
+        addModule( road );
+
+        // 创建仓库
+        var base = createBase( objects );
+        addModule( base );
 
         // 门
-        var doorMaterial = new THREE.MeshLambertMaterial( { color: 0xdddddd, transparent: true, opacity: 1, side: THREE.DoubleSide } );
-        var doorEdgeMaterialArray = [doorMaterial, doorMaterial, doorMaterial, doorMaterial, doorMaterial, doorMaterial];
-        var doorTop = new THREE.Mesh( new THREE.BoxBufferGeometry( 100, 5, 10, 3, 1, 3), doorEdgeMaterialArray );
-        var doorLeft = new THREE.Mesh( new THREE.BoxBufferGeometry( 5, 60, 5, 3, 1, 3), doorEdgeMaterialArray );
-        var doorRight = new THREE.Mesh( new THREE.BoxBufferGeometry( 5, 60, 5, 3, 1, 3), doorEdgeMaterialArray );
-        doorTop.position.set( 0, 60, 180);
-        doorLeft.position.set( -45, 30, 175);
-        doorRight.position.set( 45, 30, 175);
-        var doorGroup = new THREE.Group();
-        doorGroup.add(doorTop);
-        doorGroup.add(doorLeft);
-        doorGroup.add(doorRight);
-        scene.add(doorGroup);
-        axis.add(doorGroup);
+        var door = createDoor();
+        door.position.set( 0, 30, 175);
+        addModule(door);
 
-        // 窗
-        var windowMaterial = new THREE.MeshLambertMaterial( { color: 0xdddddd, transparent: true, opacity: 1, side: THREE.DoubleSide } );
-        var windowEdgeMaterialArray = [windowMaterial, windowMaterial, windowMaterial, windowMaterial, windowMaterial, windowMaterial];
-        var windowEdgeTop = new THREE.BoxBufferGeometry( 4, 4, 60, 3, 1, 3);
-        var windowEdgeLeft = new THREE.BoxBufferGeometry( 4, 30, 4, 3, 1, 3);
-        // 窗户1
-        var windowTopL1 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftL1 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomL1 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightL1 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopL1.position.set( 175, 65, 80);
-        windowLeftL1.position.set( 175, 50, 52.5);
-        windowBottomL1.position.set( 175, 35, 80);
-        windowRightL1.position.set( 175, 50, 107.5);
-        // 窗户2
-        var windowTopL2 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftL2 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomL2 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightL2 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopL2.position.set( 175, 65, -80);
-        windowLeftL2.position.set( 175, 50, -52.5);
-        windowBottomL2.position.set( 175, 35, -80);
-        windowRightL2.position.set( 175, 50, -107.5);
-        // 窗户3
-        var windowTopR1 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftR1 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomR1 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightR1 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopR1.position.set( -175, 65, 80);
-        windowLeftR1.position.set( -175, 50, 52.5);
-        windowBottomR1.position.set( -175, 35, 80);
-        windowRightR1.position.set( -175, 50, 107.2);
-        // 窗户4
-        var windowTopR2 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftR2 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomR2 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightR2 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopR2.position.set( -175, 65, -80);
-        windowLeftR2.position.set( -175, 50, -52.5);
-        windowBottomR2.position.set( -175, 35, -80);
-        windowRightR2.position.set( -175, 50, -107.5);
+        // 窗户
+        var window1 = createWindow();
+        window1.position.set(175, 50, 80);
+        var window2 = createWindow();
+        window2.position.set(175, 50, -80);
+        var window3 = createWindow();
+        window3.position.set(175, 120, 80);
+        var window4 = createWindow();
+        window4.position.set(175, 120, -80);
+        var window15 = createWindow();
+        window15.position.set(175, 50, 0);
+        var window16 = createWindow();
+        window16.position.set(175, 120, 0);
 
-        // 窗户5
-        var windowTopL3 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftL3 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomL3 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightL3 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopL3.position.set( 175, 125, 80);
-        windowLeftL3.position.set( 175, 110, 52.5);
-        windowBottomL3.position.set( 175, 95, 80);
-        windowRightL3.position.set( 175, 110, 107.5);
-        // 窗户6
-        var windowTopL4 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftL4 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomL4 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightL4 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopL4.position.set( 175, 125, -80);
-        windowLeftL4.position.set( 175, 110, -52.5);
-        windowBottomL4.position.set( 175, 95, -80);
-        windowRightL4.position.set( 175, 110, -107.5);
-        // 窗户7
-        var windowTopR3 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftR3 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomR3 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightR3 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopR3.position.set( -175, 125, 80);
-        windowLeftR3.position.set( -175, 110, 52.5);
-        windowBottomR3.position.set( -175, 95, 80);
-        windowRightR3.position.set( -175, 110, 107.5);
-        // 窗户8
-        var windowTopR4 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftR4 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomR4 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightR4 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopR4.position.set( -175, 125, -80);
-        windowLeftR4.position.set( -175, 110, -52.5);
-        windowBottomR4.position.set( -175, 95, -80);
-        windowRightR4.position.set( -175, 110, -107.5);
+        var window5 = createWindow();
+        window5.position.set(-175, 50, 80);
+        var window6 = createWindow();
+        window6.position.set(-175, 50, -80);
+        var window7 = createWindow();
+        window7.position.set(-175, 120, 80);
+        var window8 = createWindow();
+        window8.position.set(-175, 120, -80);
+        var window17 = createWindow();
+        window17.position.set(-175, 50, 0);
+        var window18 = createWindow();
+        window18.position.set(-175, 120, 0);
 
-        var windowEdgeTop = new THREE.BoxBufferGeometry( 60, 4, 4, 3, 1, 3);
-        var windowEdgeLeft = new THREE.BoxBufferGeometry( 4, 30, 4, 3, 1, 3);
-        // 窗户9
-        var windowTopF1 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftF1 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomF1 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightF1 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopF1.position.set( 80, 125, 175);
-        windowLeftF1.position.set( 52.5, 110, 175);
-        windowBottomF1.position.set( 80, 95, 175);
-        windowRightF1.position.set( 107.5, 110, 175);
-        // 窗户10
-        var windowTopF2 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftF2 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomF2 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightF2 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopF2.position.set( -80, 125, 175);
-        windowLeftF2.position.set( -52.5, 110, 175);
-        windowBottomF2.position.set( -80, 95, 175);
-        windowRightF2.position.set( -107.5, 110, 175);
-        // 窗户11
-        var windowTopF3 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftF3 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomF3 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightF3 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopF3.position.set( 80, 125, -175);
-        windowLeftF3.position.set( 52.5, 110, -175);
-        windowBottomF3.position.set( 80, 95, -175);
-        windowRightF3.position.set( 107.5, 110, -175);
-        // 窗户12
-        var windowTopF4 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowLeftF4 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        var windowBottomF4 = new THREE.Mesh( windowEdgeTop, windowEdgeMaterialArray );
-        var windowRightF4 = new THREE.Mesh( windowEdgeLeft, windowEdgeMaterialArray );
-        windowTopF4.position.set( -80, 125, -175);
-        windowLeftF4.position.set( -52.5, 110, -175);
-        windowBottomF4.position.set( -80, 95, -175);
-        windowRightF4.position.set( -107.5, 110, -175);
+        var window9 = createWindow();
+        window9.position.set(80, 50, -175);
+        window9.rotation.y = Math.PI/2;
+        var window10 = createWindow();
+        window10.position.set(-80, 50, -175);
+        window10.rotation.y = Math.PI/2;
+        var window11 = createWindow();
+        window11.position.set(80, 120, -175);
+        window11.rotation.y = Math.PI/2;
+        var window12 = createWindow();
+        window12.position.set(-80, 120, -175);
+        window12.rotation.y = Math.PI/2;
+        var window13 = createWindow();
+        window13.position.set(0, 50, -175);
+        window13.rotation.y = Math.PI/2;
+        var window14 = createWindow();
+        window14.position.set(0, 120, -175);
+        window14.rotation.y = Math.PI/2;
 
-        var windowGroup = new THREE.Group();
-            windowGroup.add(windowTopL1);
-            windowGroup.add(windowLeftL1);
-            windowGroup.add(windowBottomL1);
-            windowGroup.add(windowRightL1);
-            windowGroup.add(windowTopL2);
-            windowGroup.add(windowLeftL2);
-            windowGroup.add(windowBottomL2);
-            windowGroup.add(windowRightL2);
-            windowGroup.add(windowTopR1);
-            windowGroup.add(windowLeftR1);
-            windowGroup.add(windowBottomR1);
-            windowGroup.add(windowRightR1);
-            windowGroup.add(windowTopR2);
-            windowGroup.add(windowLeftR2);
-            windowGroup.add(windowBottomR2);
-            windowGroup.add(windowRightR2);
-            windowGroup.add(windowTopL3);
-            windowGroup.add(windowLeftL3);
-            windowGroup.add(windowBottomL3);
-            windowGroup.add(windowRightL3);
-            windowGroup.add(windowTopL4);
-            windowGroup.add(windowLeftL4);
-            windowGroup.add(windowBottomL4);
-            windowGroup.add(windowRightL4);
-            windowGroup.add(windowTopR3);
-            windowGroup.add(windowLeftR3);
-            windowGroup.add(windowBottomR3);
-            windowGroup.add(windowRightR3);
-            windowGroup.add(windowTopR4);
-            windowGroup.add(windowLeftR4);
-            windowGroup.add(windowBottomR4);
-            windowGroup.add(windowRightR4);
-            windowGroup.add(windowTopF1);
-            windowGroup.add(windowLeftF1);
-            windowGroup.add(windowBottomF1);
-            windowGroup.add(windowRightF1);
-            windowGroup.add(windowTopF2);
-            windowGroup.add(windowLeftF2);
-            windowGroup.add(windowBottomF2);
-            windowGroup.add(windowRightF2);
-            windowGroup.add(windowTopF3);
-            windowGroup.add(windowLeftF3);
-            windowGroup.add(windowBottomF3);
-            windowGroup.add(windowRightF3);
-            windowGroup.add(windowTopF4);
-            windowGroup.add(windowLeftF4);
-            windowGroup.add(windowBottomF4);
-            windowGroup.add(windowRightF4);
+        var window19 = createWindow();
+        window19.position.set(80, 120, 175);
+        window19.rotation.y = Math.PI/2;
+        var window20 = createWindow();
+        window20.position.set(-80, 120, 175);
+        window20.rotation.y = Math.PI/2;
+        var window21 = createWindow();
+        window21.position.set(0, 120, 175);
+        window21.rotation.y = Math.PI/2;
 
-        scene.add(windowGroup);
-        axis.add(windowGroup);
+        addModule(window1);
+        addModule(window2);
+        addModule(window3);
+        addModule(window4);
+        addModule(window5);
+        addModule(window6);
+        addModule(window7);
+        addModule(window8);
+        addModule(window9);
+        addModule(window10);
+        addModule(window11);
+        addModule(window12);
+        addModule(window13);
+        addModule(window14);
+        addModule(window15);
+        addModule(window16);
+        addModule(window17);
+        addModule(window18);
+        addModule(window19);
+        addModule(window20);
+        addModule(window21);
 
         // 货架
         var goodStat={
-        	x:20,  // 长
-			y:70,  // 宽
-			z:10   // 高
+            x:20,  // 长
+            y:70,  // 宽
+            z:10   // 高
         }
-        // 
+        //
         var goodsShelf = new THREE.BoxBufferGeometry( goodStat.x, goodStat.z, goodStat.y, 2, 1, 7);
+
         // 2排
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(-120, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(-120, (goodStat.z/2)+i*(goodStat.z+0.01), -10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(-60, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(-60, (goodStat.z/2)+i*(goodStat.z+0.01), -10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(0, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(0, (goodStat.z/2)+i*(goodStat.z+0.01), -10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(60, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(60, (goodStat.z/2)+i*(goodStat.z+0.01), -10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(120, (goodStat.z/2)+i*(goodStat.z+0.01), -goodStat.y/2-10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(120, (goodStat.z/2)+i*(goodStat.z+0.01), -10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         // 3排
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(-120, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y/2+10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(-120, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y+10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(-60, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y/2+10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(-60, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y+10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(0, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y/2+10);
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(0, (goodStat.z/2)+i*(goodStat.z+0.01), goodStat.y+10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(60, goodStat.z/2+i*(goodStat.z+0.01), (goodStat.y/2+10));
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(60, goodStat.z/2+i*(goodStat.z+0.01), goodStat.y+10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(120, goodStat.z/2+i*(goodStat.z+0.01), (goodStat.y/2+10));
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(120, goodStat.z/2+i*(goodStat.z+0.01), goodStat.y+10);
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         // 1排
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(-120, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(-120, goodStat.z/2+i*(goodStat.z+0.01), -(goodStat.y+30));
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(-60, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(-60, goodStat.z/2+i*(goodStat.z+0.01), -(goodStat.y+30));
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(0, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(0, goodStat.z/2+i*(goodStat.z+0.01), -(goodStat.y+30));
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(60, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(60, goodStat.z/2+i*(goodStat.z+0.01), -(goodStat.y+30));
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
         for(var i=0;i<4;i++){
             MovingCube = new THREE.Mesh( goodsShelf, constructOwnMaterial() );
-            MovingCube.position.set(120, goodStat.z/2+i*(goodStat.z+0.01), (-goodStat.y/2-(goodStat.y+30)));
-            scene.add( MovingCube );
-            axis.add(MovingCube);
+            MovingCube.position.set(120, goodStat.z/2+i*(goodStat.z+0.01), -(goodStat.y+30));
+            MovingCube.name = "goodsShelf";
+            addModule( MovingCube );
             //放到对象数组中
             objects.push( MovingCube );
         }
 
-        var boxMaterailArray = [];
-        boxMaterailArray.push(new THREE.MeshBasicMaterial({url:""}));  //左
-        boxMaterailArray.push(new THREE.MeshBasicMaterial({url:""}));  //右
-        boxMaterailArray.push(new THREE.MeshBasicMaterial({url:""}));  //上
-        boxMaterailArray.push(new THREE.MeshBasicMaterial({url:""}));  //下
-        boxMaterailArray.push(new THREE.MeshBasicMaterial({url:""}));  //前
-        boxMaterailArray.push(new THREE.MeshBasicMaterial({url:""}));  //后
+        var alarm1 = createAlarm( objects );
+        //alarm1.position.set( 0, 60, 0);
+        alarm1.position.set( 60, 60, 170);
+        alarm1.rotation.x = -Math.PI/2;
+        addModule( alarm1 );
 
-        var box = new THREE.BoxBufferGeometry(10,8,10,5,2,5);
+        var doorButton1 = createDoorButton();
+        doorButton1.position.set( 55, 30, 176);
+        doorButton1.rotation.x = Math.PI/2;
+        addModule( doorButton1 );
 
+        var doorButton2 = createDoorButton();
+        doorButton2.position.set( -55, 30, 174);
+        doorButton2.rotation.x = -Math.PI/2;
+        addModule( doorButton2 );
+
+        // 添加
+        var cameraG = createCamera( objects );
+        cameraG.position.set( -140, 70, 170);
+        addModule( cameraG );
+
+        var cameraG1 = createCamera( objects );
+        cameraG1.position.set( 140, 70, -170);
+        cameraG1.rotation.y = Math.PI;
+        addModule( cameraG1 );
+
+        var texture = new THREE.TextureLoader().load( 'img/crate.gif' );
+        var goodsMaterailArray = [texture, texture, texture, texture, texture, texture];
+        var box = new THREE.BoxBufferGeometry( 10, 10, 10 );
+        var goods = new THREE.Mesh( box, goodsMaterailArray);
+        goods.position.set( 10, 60, 80);
+        addModule( goods );
     }
-	
-	// 创建货架贴图素材
-	function constructOwnMaterial(){
-		var materialArray = new Array();
+
+    // 创建货架贴图素材
+    function constructOwnMaterial(){
+        var materialArray = new Array();
         materialArray.push(new THREE.MeshLambertMaterial( { color:0x5fa8df, transparent:true, opacity: 0.01, side: THREE.FrontSide, wireframe:false}));	//左
         materialArray.push(new THREE.MeshLambertMaterial( { color:0x5fa8df, transparent:true, opacity: 0.01, side: THREE.FrontSide, wireframe:false}));	//右
-        materialArray.push(new THREE.MeshLambertMaterial( { color:0xd2771e, transparent:true, opacity: 0.5, side: THREE.FrontSide, wireframe:false}));	    //上
+        materialArray.push(new THREE.MeshLambertMaterial( { color:0xd2771e, transparent:true, opacity: 0.9, side: THREE.FrontSide, wireframe:false}));	    //上
         materialArray.push(new THREE.MeshLambertMaterial( { color:0xd2771e, transparent:false, opacity: 1, side: THREE.FrontSide, wireframe:false}));	    //下
         materialArray.push(new THREE.MeshLambertMaterial( { color:0x5fa8df, transparent: false, opacity: 1, side: THREE.FrontSide, wireframe:true, wireframeLinewidth: 4 }));	//前
         materialArray.push(new THREE.MeshLambertMaterial( { color:0x5fa8df, transparent: false, opacity: 1, side: THREE.FrontSide, wireframe:true, wireframeLinewidth: 4 }));	//后
-		return materialArray;
-	}
-	
+        return materialArray;
+    }
+
+    function addModule( obj ) {
+        scene.add(obj);
+        axis.add(obj);
+    }
+
     function animate() {
         requestAnimationFrame(animate);
         renderer.render(scene, camera);//调用WebGLRenderer的render函数刷新场景
@@ -482,57 +388,11 @@
 
     function update() {
         controls.update();
-        stats.update();
+        //stats.update();
     }
 
     function render() {
         renderer.render( scene, camera );
-    }
-
-    function createDiv(width, height, top, left, bottom, right, html) {
-        var div = document.createElement('div');
-        div.style.position = 'absolute';
-        if(!isNaN( width )){
-            div.style.width = width+'px';
-        }
-        if(!isNaN( height )){
-            div.style.height = height+'px';
-        }
-        div.style.zIndex = 999;
-        div.style.overflow='hidden';
-        if(top!=0)div.style.top = top+'px';
-        if(left!=0)div.style.left = left+'px';
-        if(bottom!=0)div.style.bottom = bottom+'px';
-        if(right!=0)div.style.right = right+'px';
-        div.innerHTML = html;
-        container.appendChild( div );
-    }
-
-    function changeData(){
-        var random = 3*Math.random() >> 0;
-        var dataList = JSONDATA[random];
-        $("#tbody").empty();
-        var trs = "";
-        for(var i=0;i<dataList.length;i++){
-            trs += "<tr><td>"+dataList[i].name+"</td><td>"+dataList[i].mount+"</td><td>"+dataList[i].date+"</td><td>"+dataList[i].incharge+"</td></tr>";
-        }
-        $("#tbody").append(trs);
-    }
-
-    function createMessageTable(){
-    	var message = '';
-    	message += '<div id="messageBox" class="messagebox"><h2>当前存储状况：<span id="close" style="float: right;color: #fe0000;display: block" onclick="$(this).parent().parent().hide();">X</span></h2>';
-    	message += '<table><thead>';
-        message += '<tr><td>类目</td><td>库存数量</td><td>录入时间</td><td>负责人</td></tr>';
-        message += '</thead>';
-        message += '<tbody id="tbody">';
-        message += '<tr><td>华为P20</td><td>300</td><td>2017-11-01</td><td>张三</td></tr>';
-        message += '<tr><td>小米8</td><td>500</td><td>2017-11-24</td><td>李四</td></tr>';
-        message += '<tr><td>OPPO10</td><td>130</td><td>2017-11-01</td><td>张三</td></tr>';
-        message += '<tr><td>苹果iphoneX</td><td>250</td><td>2017-11-11</td><td>张三</td></tr>';
-        message += '<tr><td>三星Galaxy7</td><td>143</td><td>2017-11-24</td><td>李四</td></tr>';
-        message += '</tbody></table></div>';
-        return message;
     }
 
     function onDocumentMouseMove( event ){
@@ -587,16 +447,34 @@
         // 屏蔽默认方法时
         event.preventDefault();
 
-        // 平移修改为自定义函数
-        if(SELECTED != null || SELECTED != undefined){
-            document.getElementById("messageBox").style.display="none";
-            SELECTED.material[0].color.setHex( 0x5fa8df );
-            SELECTED.material[1].color.setHex( 0x5fa8df );
-            SELECTED.material[2].color.setHex( 0xd2771e );
-            SELECTED.material[3].color.setHex( 0xd2771e );
-            SELECTED.material[4].color.setHex( 0x5fa8df );
-            SELECTED.material[5].color.setHex( 0x5fa8df );
-            SELECTED = null;
+        if(SELECTED != null || SELECTED != undefined) {
+            // 清空
+            try {
+                document.getElementById("messageBox").style.display = "none";
+            } catch (e) {
+            }
+
+            try {
+                document.getElementById("infoBox").style.display = "none";
+            } catch (e) {
+            }
+
+            if (SELECTED.name == "goodsShelf") {
+                SELECTED.material[0].color.setHex(0x5fa8df);
+                SELECTED.material[1].color.setHex(0x5fa8df);
+                SELECTED.material[2].color.setHex(0xd2771e);
+                SELECTED.material[3].color.setHex(0xd2771e);
+                SELECTED.material[4].color.setHex(0x5fa8df);
+                SELECTED.material[5].color.setHex(0x5fa8df);
+                SELECTED = null;
+            }
+
+            // if( SELECTED.name == "camera"){
+            //     SELECTED.material.color = 0x555555;
+            // }
+            // if( SELECTED.name == "button"){
+            //     SELECTED.material.color = 0xff0000;
+            // }
         }
 
         var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
@@ -608,32 +486,62 @@
 
         if ( intersects.length > 0 ) {
             //不能改变视角了
-            controls.enabled = true;
+            controls.enabled = false;
+
             //把选中的对象放到全局变量SELECTED中
             SELECTED = intersects[0].object;
-            //console.log(SELECTED);
-            SELECTED.material[0].color.setHex( 0xff1010 );
-            SELECTED.material[1].color.setHex( 0xff1010 );
-            SELECTED.material[2].color.setHex( 0xff1010 );
-            SELECTED.material[3].color.setHex( 0xff1010 );
-            SELECTED.material[4].color.setHex( 0xff1010 );
-            SELECTED.material[5].color.setHex( 0xff1010 );
-            //再和水平面相交
-            var intersects = raycaster.intersectObject(plane);
 
-            //选中位置和水平面位置（物体中心）的偏移量
-            //offset.copy( intersects[0].point ).sub( plane.position );
+            if (SELECTED.name == "goodsShelf") {
+                //console.log(SELECTED);
+                SELECTED.material[0].color.setHex(0xff1010);
+                SELECTED.material[1].color.setHex(0xff1010);
+                SELECTED.material[2].color.setHex(0xff1010);
+                SELECTED.material[3].color.setHex(0xff1010);
+                SELECTED.material[4].color.setHex(0xff1010);
+                SELECTED.material[5].color.setHex(0xff1010);
+                //再和水平面相交
+                //var intersects = raycaster.intersectObject(plane);
 
-            var messageBox = document.getElementById("messageBox");
-            if (messageBox == null || messageBox == undefined) {
-                createDiv(500, undefined, window.innerHeight / 2 - 200, window.innerWidth / 2 - 250, 0, 0, createMessageTable());
-            } else {
-                if (LASTUUID != SELECTED.uuid) {
-                    LASTUUID = SELECTED.uuid;
-                    changeData();
+                //选中位置和水平面位置（物体中心）的偏移量
+                //offset.copy( intersects[0].point ).sub( plane.position );
+
+                var messageBox = document.getElementById("messageBox");
+                if (messageBox == null || messageBox == undefined) {
+                    createDiv(500, undefined, window.innerHeight / 2 - 200, window.innerWidth / 2 - 250, 0, 0, createMessageTable());
+                } else {
+                    if (LASTUUID != SELECTED.uuid) {
+                        LASTUUID = SELECTED.uuid;
+                        changeData();
+                    }
+                    messageBox.style.display = "block";
                 }
-                messageBox.style.display = "block";
+            } else if (SELECTED.name == "base" || SELECTED.name == "camera" || SELECTED.name == "alarm" || SELECTED.name == "button") {
+                SELECTED = intersects[0].object;
+                console.log(SELECTED);
+                var messageBox = document.getElementById("infoBox");
+                if (messageBox == null || messageBox == undefined) {
+                    createDiv(500, undefined, window.innerHeight / 2 - 200, window.innerWidth / 2 - 250, 0, 0, createInfoDiv(SELECTED.name));
+                } else {
+                    if (LASTUUID != SELECTED.uuid) {
+                        LASTUUID = SELECTED.uuid;
+                        changeInfo(SELECTED.name);
+                    }
+                    messageBox.style.display = "block";
+                }
+
+                // if (SELECTED.name == "camera") {
+                //     SELECTED.material.color = 0xff0000;
+                // }
+                // if (SELECTED.name == "button") {
+                //     SELECTED.material.color = 0x0000ff;
+                // }
+
+            } else if (SELECTED.name == "") {
+                // 无动作
             }
+
+            // 放开控制
+            controls.enabled = true;
         }
     }
 
@@ -649,414 +557,27 @@
         // TEMPRATURE
         createDiv(132,650,20,0,0,20,
             '<div class="section"><ul class="clearfix">' +
-            '<li><div class="photo"><p>PM2.5</p><span id="PM">--</span><span>μg/m³</span></div></li>' +
-            '<li><div class="photo"><p>气压</p><span id="AP">--</span><span>hpa</span></div></li>' +
-            '<li><div class="photo"><p>气温</p><span id="TE">--</span><span>℃</span></div></li>' +
-            '<li><div class="photo"><p>湿度</p><span id="HU">--</span><span>rh</span></div></li>' +
+            '<li><div class="photo"><p>PM2.5</p><span id="PM">40</span><span>μg/m³</span></div></li>' +
+            '<li><div class="photo"><p>气压</p><span id="AP">1.1</span><span>hpa</span></div></li>' +
+            '<li><div class="photo"><p>气温</p><span id="TE">25</span><span>℃</span></div></li>' +
+            '<li><div class="photo"><p>湿度</p><span id="HU">50</span><span>rh</span></div></li>' +
             '</ul></div>');
 
         // HISTORY BACK
-        createDiv(140,20,0,20,20,0,'<a href="javascript:history.back();" style="color:#999;font-weight:800;font-size:16px">&lt;&lt;&nbsp;返回</a>');
+        // createDiv(140,20,0,20,20,0,'<a href="javascript:history.back();" style="color:#999;font-weight:800;font-size:16px">&lt;&lt;&nbsp;返回</a>');
+
+        createDiv(200, 200, 20, 20, 0, 0, '<div id="charts" style="width: 200px;height: 200px;display: block"></div>');
 
         // 加载json数据
         $.post("./json/data.json",function(data){
             JSONDATA = data;
         })
+        initCharts();
     });
-
-    /**
-     * @author qiao / https://github.com/qiao
-     * @author mrdoob / http://mrdoob.com
-     * @author alteredq / http://alteredqualia.com/
-     * @author WestLangley / http://github.com/WestLangley
-     */
-    THREE.OrbitControls = function ( object, domElement ) {
-
-        this.object = object;
-        this.domElement = ( domElement !== undefined ) ? domElement : document;
-
-        // API
-
-        this.enabled = true;
-
-        this.center = new THREE.Vector3();
-
-        this.userZoom = true;
-        this.userZoomSpeed = 1.0;
-
-        this.userRotate = true;
-        this.userRotateSpeed = 1.0;
-
-        this.userPan = false;
-        this.userPanSpeed = 2.0;
-
-        this.autoRotate = false;
-        this.autoRotateSpeed = 2.0; // 30 seconds per round when fps is 60
-
-        this.minPolarAngle = 0; // radians
-        this.maxPolarAngle = Math.PI; // radians
-
-        this.minDistance = 0;
-        this.maxDistance = Infinity;
-
-        // 65 /*A*/, 83 /*S*/, 68 /*D*/
-        this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40, ROTATE: 65, ZOOM: 83, PAN: 68 };
-
-        // internals
-
-        var scope = this;
-
-        var EPS = 0.000001;
-        var PIXELS_PER_ROUND = 1800;
-
-        var rotateStart = new THREE.Vector2();
-        var rotateEnd = new THREE.Vector2();
-        var rotateDelta = new THREE.Vector2();
-
-        var zoomStart = new THREE.Vector2();
-        var zoomEnd = new THREE.Vector2();
-        var zoomDelta = new THREE.Vector2();
-
-        var phiDelta = 0;
-        var thetaDelta = 0;
-        var scale = 1;
-
-        var lastPosition = new THREE.Vector3();
-
-        var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 };
-        var state = STATE.NONE;
-
-        // events
-
-        var changeEvent = { type: 'change' };
-
-
-        this.rotateLeft = function ( angle ) {
-
-            if ( angle === undefined ) {
-
-                angle = getAutoRotationAngle();
-
-            }
-
-            thetaDelta -= angle;
-
-        };
-
-        this.rotateRight = function ( angle ) {
-
-            if ( angle === undefined ) {
-
-                angle = getAutoRotationAngle();
-
-            }
-
-            thetaDelta += angle;
-
-        };
-
-        this.rotateUp = function ( angle ) {
-
-            if ( angle === undefined ) {
-
-                angle = getAutoRotationAngle();
-
-            }
-
-            phiDelta -= angle;
-
-        };
-
-        this.rotateDown = function ( angle ) {
-
-            if ( angle === undefined ) {
-
-                angle = getAutoRotationAngle();
-
-            }
-
-            phiDelta += angle;
-
-        };
-
-        this.zoomIn = function ( zoomScale ) {
-
-            if ( zoomScale === undefined ) {
-
-                zoomScale = getZoomScale();
-
-            }
-
-            scale /= zoomScale;
-
-        };
-
-        this.zoomOut = function ( zoomScale ) {
-
-            if ( zoomScale === undefined ) {
-
-                zoomScale = getZoomScale();
-
-            }
-
-            scale *= zoomScale;
-
-        };
-
-        this.pan = function ( distance ) {
-
-            distance.transformDirection( this.object.matrix );
-            distance.multiplyScalar( scope.userPanSpeed );
-
-            this.object.position.add( distance );
-            this.center.add( distance );
-
-        };
-
-        this.update = function () {
-
-            var position = this.object.position;
-            var offset = position.clone().sub( this.center );
-
-            // angle from z-axis around y-axis
-
-            var theta = Math.atan2( offset.x, offset.z );
-
-            // angle from y-axis
-
-            var phi = Math.atan2( Math.sqrt( offset.x * offset.x + offset.z * offset.z ), offset.y );
-
-            if ( this.autoRotate ) {
-
-                this.rotateLeft( getAutoRotationAngle() );
-
-            }
-
-            theta += thetaDelta;
-            phi += phiDelta;
-
-            // restrict phi to be between desired limits
-            phi = Math.max( this.minPolarAngle, Math.min( this.maxPolarAngle, phi ) );
-
-            // restrict phi to be betwee EPS and PI-EPS
-            phi = Math.max( EPS, Math.min( Math.PI - EPS, phi ) );
-
-            var radius = offset.length() * scale;
-
-            // restrict radius to be between desired limits
-            radius = Math.max( this.minDistance, Math.min( this.maxDistance, radius ) );
-
-            offset.x = radius * Math.sin( phi ) * Math.sin( theta );
-            offset.y = radius * Math.cos( phi );
-            offset.z = radius * Math.sin( phi ) * Math.cos( theta );
-
-            position.copy( this.center ).add( offset );
-
-            this.object.lookAt( this.center );
-
-            thetaDelta = 0;
-            phiDelta = 0;
-            scale = 1;
-
-            if ( lastPosition.distanceTo( this.object.position ) > 0 ) {
-
-                this.dispatchEvent( changeEvent );
-
-                lastPosition.copy( this.object.position );
-
-            }
-
-        };
-
-
-        function getAutoRotationAngle() {
-
-            return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
-
-        }
-
-        function getZoomScale() {
-
-            return Math.pow( 0.95, scope.userZoomSpeed );
-
-        }
-
-        function onMouseDown( event ) {
-
-            if ( scope.enabled === false ) return;
-            if ( scope.userRotate === false ) return;
-
-            event.preventDefault();
-
-            if ( state === STATE.NONE )
-            {
-                if ( event.button === 2 )
-                    state = STATE.ROTATE;
-                if ( event.button === 1 )
-                    state = STATE.ZOOM;
-                if ( event.button === 0 )
-                    state = STATE.PAN;
-            }
-
-
-            if ( state === STATE.ROTATE ) {
-
-                //state = STATE.ROTATE;
-
-                rotateStart.set( event.clientX, event.clientY );
-
-            } else if ( state === STATE.ZOOM ) {
-
-                //state = STATE.ZOOM;
-
-                zoomStart.set( event.clientX, event.clientY );
-
-            } else if ( state === STATE.PAN ) {
-
-            }
-
-            document.addEventListener( 'mousemove', onMouseMove, false );
-            document.addEventListener( 'mouseup', onMouseUp, false );
-
-        }
-
-        function onMouseMove( event ) {
-
-            if ( scope.enabled === false ) return;
-
-            event.preventDefault();
-
-            if ( state === STATE.ROTATE ) {
-
-                rotateEnd.set( event.clientX, event.clientY );
-                rotateDelta.subVectors( rotateEnd, rotateStart );
-
-                scope.rotateLeft( 2 * Math.PI * rotateDelta.x / PIXELS_PER_ROUND * scope.userRotateSpeed );
-                scope.rotateUp( 2 * Math.PI * rotateDelta.y / PIXELS_PER_ROUND * scope.userRotateSpeed );
-
-                rotateStart.copy( rotateEnd );
-
-            } else if ( state === STATE.ZOOM ) {
-
-                zoomEnd.set( event.clientX, event.clientY );
-                zoomDelta.subVectors( zoomEnd, zoomStart );
-
-                if ( zoomDelta.y > 0 ) {
-
-                    scope.zoomIn();
-
-                } else {
-
-                    scope.zoomOut();
-
-                }
-
-                zoomStart.copy( zoomEnd );
-
-            } else if ( state === STATE.PAN ) {
-
-            }
-
-        }
-
-        function onMouseUp( event ) {
-
-            if ( scope.enabled === false ) return;
-            if ( scope.userRotate === false ) return;
-
-            document.removeEventListener( 'mousemove', onMouseMove, false );
-            document.removeEventListener( 'mouseup', onMouseUp, false );
-
-            state = STATE.NONE;
-
-        }
-
-        function onMouseWheel( event ) {
-
-            if ( scope.enabled === false ) return;
-            if ( scope.userZoom === false ) return;
-
-            var delta = 0;
-
-            if ( event.wheelDelta ) { // WebKit / Opera / Explorer 9
-
-                delta = event.wheelDelta;
-
-            } else if ( event.detail ) { // Firefox
-
-                delta = - event.detail;
-
-            }
-
-            if ( delta > 0 ) {
-
-                scope.zoomOut();
-
-            } else {
-
-                scope.zoomIn();
-
-            }
-
-        }
-
-        function onKeyDown( event ) {
-
-            if ( scope.enabled === false ) return;
-            if ( scope.userPan === false ) return;
-
-            switch ( event.keyCode ) {
-
-                /*case scope.keys.UP:
-                    scope.pan( new THREE.Vector3( 0, 1, 0 ) );
-                    break;
-                case scope.keys.BOTTOM:
-                    scope.pan( new THREE.Vector3( 0, - 1, 0 ) );
-                    break;
-                case scope.keys.LEFT:
-                    scope.pan( new THREE.Vector3( - 1, 0, 0 ) );
-                    break;
-                case scope.keys.RIGHT:
-                    scope.pan( new THREE.Vector3( 1, 0, 0 ) );
-                    break;
-                */
-                case scope.keys.ROTATE:
-                    state = STATE.ROTATE;
-                    break;
-                case scope.keys.ZOOM:
-                    state = STATE.ZOOM;
-                    break;
-                case scope.keys.PAN:
-                    state = STATE.PAN;
-                    break;
-
-            }
-
-        }
-
-        function onKeyUp( event ) {
-
-            switch ( event.keyCode ) {
-
-                case scope.keys.ROTATE:
-                case scope.keys.ZOOM:
-                case scope.keys.PAN:
-                    state = STATE.NONE;
-                    break;
-            }
-
-        }
-
-        this.domElement.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
-        this.domElement.addEventListener( 'mousedown', onMouseDown, false );
-        this.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
-        this.domElement.addEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
-        window.addEventListener( 'keydown', onKeyDown, false );
-        window.addEventListener( 'keyup', onKeyUp, false );
-
-    };
-
-    THREE.OrbitControls.prototype = Object.create( THREE.EventDispatcher.prototype );
 </script>
+<script src="js/controls/CustomOrbitControls.js"></script>
+<script src="js/modules/models.js"></script>
+<script src="js/modules/message.js"></script>
+<script src="js/echarts.min.js"></script>
 </body>
 </html>

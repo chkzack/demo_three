@@ -60,3 +60,7 @@
 .messagebox table tr td {
     padding: 2px;
 }
+#content {
+    height: 100px;
+    text-align: center;
+}
